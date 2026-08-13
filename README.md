@@ -30,6 +30,25 @@ Results are cached to `data/cache.json` and re-scraped once daily at 4am NZ
 time via `node-cron` (`server.js`), plus once on server boot if no cache exists
 yet.
 
+## Match-day email reminders
+
+Every 15 minutes (`server.js`), a job checks the cached fixtures for any match
+kicking off in the next 45-60 minutes and, if a reminder hasn't already gone
+out for it, emails one via [Resend](https://resend.com) (`lib/resend.js`).
+Sent reminders are recorded in `data/sentReminders.json` (`lib/sentReminders.js`)
+so restarts and repeat checks don't send duplicates; entries older than 7 days
+are pruned automatically.
+
+Requires these environment variables (unset = reminders silently disabled,
+everything else keeps working):
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `RESEND_API_KEY` | yes | Resend API key |
+| `REMINDER_TO_EMAIL` | yes | Recipient address |
+| `RESEND_FROM_EMAIL` | no | From address (defaults to Resend's sandbox `onboarding@resend.com`, which can only send to the email your Resend account is registered with — verify a domain in Resend to send to anyone else) |
+| `APP_URL` | no | Link included in the email (defaults to the Railway URL below) |
+
 ## Local development
 
 ```bash

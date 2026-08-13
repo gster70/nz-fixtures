@@ -3,6 +3,7 @@ const express = require('express');
 const cron = require('node-cron');
 const { readCache } = require('./lib/cache');
 const { scrapeAll } = require('./lib/scrapeAll');
+const { checkAndSendReminders } = require('./lib/reminders');
 
 const PORT = process.env.PORT || 3000;
 const UPCOMING_GRACE_HOURS = 6; // keep showing a match for a while after it starts
@@ -42,6 +43,17 @@ async function start() {
     console.log('Running scheduled daily scrape...');
     scrapeAll().catch((err) => console.error('Scheduled scrape failed:', err));
   }, { timezone: 'Pacific/Auckland' });
+
+  if (process.env.REMINDER_TO_EMAIL && process.env.RESEND_API_KEY) {
+    console.log('Match-day email reminders are configured and active.');
+  } else {
+    console.log('Match-day email reminders are not configured (REMINDER_TO_EMAIL / RESEND_API_KEY missing) — skipping.');
+  }
+
+  // Every 15 minutes, check for fixtures kicking off in 45-60 minutes.
+  cron.schedule('*/15 * * * *', () => {
+    checkAndSendReminders().catch((err) => console.error('Reminder check failed:', err));
+  });
 }
 
 start();
