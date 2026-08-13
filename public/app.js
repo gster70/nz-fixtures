@@ -5,6 +5,7 @@ const dateFmt = new Intl.DateTimeFormat('en-NZ', {
   weekday: 'short',
   day: '2-digit',
   month: 'short',
+  year: 'numeric',
   timeZone: NZ_TZ,
 });
 
@@ -20,6 +21,7 @@ const vnDateFmt = new Intl.DateTimeFormat('en-NZ', {
   weekday: 'short',
   day: '2-digit',
   month: 'short',
+  year: 'numeric',
   timeZone: VN_TZ,
 });
 
