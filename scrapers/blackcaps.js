@@ -3,25 +3,10 @@ const { extractFixtureObjects } = require('../lib/rscExtract');
 
 const URL = 'https://scoring.nzc.nz/fixtures';
 const TEAM_NAME = 'BLACKCAPS';
+const MAX_ATTEMPTS = 3;
 
-async function scrapeBlackCapsFixtures() {
-  const browser = await chromium.launch({ headless: true });
-  let html;
-  try {
-    const page = await browser.newPage({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    });
-    // scoring.nzc.nz runs its matches through a Vercel bot-protection JS
-    // challenge that a plain HTTP request can't pass, hence the real browser.
-    await page.goto(URL, { waitUntil: 'networkidle', timeout: 45000 });
-    await page.waitForTimeout(2000);
-    html = await page.content();
-  } finally {
-    await browser.close();
-  }
-
+function parseFixtures(html) {
   const matches = extractFixtureObjects(html, 'gid');
-
   const seen = new Set();
   const fixtures = [];
   for (const m of matches) {
@@ -43,12 +28,53 @@ async function scrapeBlackCapsFixtures() {
       kickoffUtc,
     });
   }
-
-  if (fixtures.length === 0) {
-    throw new Error('scoring.nzc.nz scrape returned zero BLACKCAPS fixtures — page layout may have changed');
-  }
-
   return fixtures;
+}
+
+async function attemptScrape() {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+    // scoring.nzc.nz runs its matches through a Vercel bot-protection JS
+    // challenge that a plain HTTP request can't pass, hence the real browser.
+    // The challenge can take a few seconds to clear, so wait for actual
+    // fixture data to show up in the DOM rather than a fixed sleep.
+    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForFunction(
+      () => document.body.innerHTML.includes('"gid"'),
+      { timeout: 30000 },
+    );
+    // give the rest of the list a moment to finish streaming in
+    await page.waitForTimeout(1500);
+    return await page.content();
+  } finally {
+    await browser.close();
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function scrapeBlackCapsFixtures() {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const html = await attemptScrape();
+      const fixtures = parseFixtures(html);
+      if (fixtures.length > 0) {
+        return fixtures;
+      }
+      lastError = new Error('scoring.nzc.nz scrape returned zero BLACKCAPS fixtures — page layout may have changed');
+    } catch (err) {
+      lastError = err;
+    }
+    console.warn(`[blackcaps] attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError.message}`);
+    if (attempt < MAX_ATTEMPTS) await sleep(5000);
+  }
+  throw lastError;
 }
 
 module.exports = { scrapeBlackCapsFixtures };
