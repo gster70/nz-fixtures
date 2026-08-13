@@ -1,0 +1,18 @@
+{
+  "name": "nz-fixtures",
+  "version": "1.0.0",
+  "description": "Mobile-friendly single-page site showing All Blacks rugby and Black Caps cricket fixtures in NZ time.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "scrape": "node -e \"require('./lib/scrapeAll').scrapeAll().then(()=>process.exit(0))\""
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
