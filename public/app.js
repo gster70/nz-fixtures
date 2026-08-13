@@ -16,8 +16,14 @@ const timeFmt = new Intl.DateTimeFormat('en-NZ', {
   timeZoneName: 'short',
 });
 
-const vnTimeFmt = new Intl.DateTimeFormat('en-NZ', {
+const vnDateFmt = new Intl.DateTimeFormat('en-NZ', {
   weekday: 'short',
+  day: '2-digit',
+  month: 'short',
+  timeZone: VN_TZ,
+});
+
+const vnTimeFmt = new Intl.DateTimeFormat('en-NZ', {
   hour: 'numeric',
   minute: '2-digit',
   hour12: true,
@@ -31,7 +37,8 @@ function formatKickoff(iso) {
 }
 
 function formatVnTime(iso) {
-  return vnTimeFmt.format(new Date(iso));
+  const d = new Date(iso);
+  return `${vnDateFmt.format(d)}, ${vnTimeFmt.format(d)}`;
 }
 
 function fixtureCard(f, isNext) {
@@ -46,8 +53,8 @@ function fixtureCard(f, isNext) {
     ${badge}
     <div class="fixture-teams">${escapeHtml(f.homeTeam)} v ${escapeHtml(f.awayTeam)}</div>
     <div class="fixture-meta">
-      <span class="fixture-datetime">${formatKickoff(f.kickoffUtc)}</span>
-      <span class="fixture-datetime-vn">${formatVnTime(f.kickoffUtc)} Vietnam</span>
+      <span class="fixture-datetime">${formatVnTime(f.kickoffUtc)} Vietnam</span>
+      <span class="fixture-datetime-nz">${formatKickoff(f.kickoffUtc)}</span>
       <span>${escapeHtml(f.venue)}</span>
     </div>
     <div class="fixture-competition">${matchType}${escapeHtml(f.competition)}</div>
