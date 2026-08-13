@@ -38,16 +38,11 @@ async function attemptScrape() {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     });
     // scoring.nzc.nz runs its matches through a Vercel bot-protection JS
-    // challenge that a plain HTTP request can't pass, hence the real browser.
-    // The challenge can take a few seconds to clear, so wait for actual
-    // fixture data to show up in the DOM rather than a fixed sleep.
-    await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await page.waitForFunction(
-      () => document.body.innerHTML.includes('"gid"'),
-      { timeout: 30000 },
-    );
-    // give the rest of the list a moment to finish streaming in
-    await page.waitForTimeout(1500);
+    // challenge that a plain HTTP request can't pass, and the challenge
+    // resolves via a full page reload — waiting for networkidle rides that
+    // out rather than racing it with a DOM-content check on the wrong page.
+    await page.goto(URL, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForTimeout(4000);
     return await page.content();
   } finally {
     await browser.close();
