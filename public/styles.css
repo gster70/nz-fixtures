@@ -6,6 +6,7 @@
   --text-dim: #9aa1ad;
   --rugby-accent: #e8e8e8;
   --cricket-accent: #d9b872;
+  --srilanka-accent: #7fb8e0;
   --next-glow: #3ddc84;
   --radius: 14px;
 }
@@ -106,6 +107,14 @@ body {
 
 .fixture-card[data-sport="rugby"] .fixture-teams { color: var(--rugby-accent); }
 .fixture-card[data-sport="cricket"] .fixture-teams { color: var(--cricket-accent); }
+.fixture-card[data-sport="srilanka"] .fixture-teams { color: var(--srilanka-accent); }
+
+.section-note {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  margin: -6px 4px 12px;
+  line-height: 1.4;
+}
 
 .fixture-meta {
   font-size: 0.85rem;

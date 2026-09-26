@@ -1,29 +1,47 @@
 # NZ Fixtures
 
-Mobile-friendly single-page site showing upcoming All Blacks rugby and Black Caps
-cricket fixtures, sorted by date with the next match highlighted, all times shown
-in NZ time (and Vietnam time alongside it).
+Mobile-friendly single-page site showing upcoming All Blacks rugby, Black Caps
+cricket, and Sri Lanka's full cricket schedule, sorted by date with the next
+match in each section highlighted, all times shown in NZ time (and Vietnam
+time alongside it, where a time is available).
 
 ## How it works
 
-A small Express server scrapes two sources on a schedule and serves cached JSON
-to the frontend, rather than scraping on every page load:
+A small Express server scrapes three sources on a schedule and serves cached
+JSON to the frontend, rather than scraping on every page load:
 
 - **Rugby** — [allblacks.com/team/all-blacks/fixtures](https://www.allblacks.com/team/all-blacks/fixtures).
   Fixture data is embedded as JSON in the server-rendered HTML, so a plain `fetch`
   is enough (`scrapers/allblacks.js`).
-- **Cricket** — [scoring.nzc.nz/fixtures](https://scoring.nzc.nz/fixtures) (New
-  Zealand Cricket's own fixtures app). This one sits behind a Vercel bot-protection
-  JS challenge that a plain request can't pass, so it's scraped with headless
-  Chromium via Playwright (`scrapers/blackcaps.js`), then filtered down to
-  BLACKCAPS matches only.
+- **Cricket (Black Caps)** — [scoring.nzc.nz/fixtures](https://scoring.nzc.nz/fixtures)
+  (New Zealand Cricket's own fixtures app). This one sits behind a Vercel
+  bot-protection JS challenge that a plain request can't pass, so it's scraped
+  with headless Chromium via Playwright (`scrapers/blackcaps.js`), then
+  filtered down to BLACKCAPS matches only.
 
   (`espncricinfo.com`, the originally requested source, blocks server-side
   scraping entirely via Akamai bot protection — confirmed with both plain
   requests and headless Chromium — so this NZC source is used instead.)
+- **Cricket (Sri Lanka, full schedule)** — Wikipedia's "International cricket
+  in `<year>`" pages (current year + next year), parsed with `cheerio`
+  (`scrapers/srilanka.js`). Every other source tried for this (ESPN Cricinfo,
+  Sri Lanka Cricket's own site, Cricbuzz) was either bot-protected or had no
+  usable fixture data — see git history for what was tried. Trade-offs from
+  using Wikipedia:
+  - Only bilateral tour series ("X in Y" headings) are parsed; multi-team
+    tournaments (ICC events, the Asian Games, etc.) use a different table
+    shape and aren't included.
+  - These summary tables don't publish kick-off times, only dates — the
+    frontend shows "Exact kick-off time not published" for this section
+    instead of a NZ/Vietnam time.
+  - Coverage depends on Wikipedia volunteers keeping the page current, so a
+    recently-confirmed tour can be missing for a while.
 
-Both scrapers run independently. If one source fails or changes layout, the
-site keeps serving the other section fine and falls back to the last
+  This section is independent of the match-day email reminders below (which
+  stay scoped to the two NZ teams only).
+
+All three scrapers run independently. If one source fails or changes layout,
+the site keeps serving the other sections fine and falls back to the last
 successfully-scraped data for the failing one (see `lib/scrapeAll.js`).
 
 Results are cached to `data/cache.json` and re-scraped once daily at 4am NZ

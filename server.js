@@ -7,10 +7,14 @@ const { checkAndSendReminders } = require('./lib/reminders');
 
 const PORT = process.env.PORT || 3000;
 const UPCOMING_GRACE_HOURS = 6; // keep showing a match for a while after it starts
+// Sri Lanka fixtures only have a date (no kick-off time, see scrapers/srilanka.js),
+// stored as midnight UTC — a wider grace window keeps them visible for the
+// whole match day regardless of which timezone the real match falls in.
+const UPCOMING_GRACE_HOURS_DATE_ONLY = 30;
 
-function upcomingOnly(section) {
+function upcomingOnly(section, graceHours = UPCOMING_GRACE_HOURS) {
   if (!section) return { fixtures: [], updatedAt: null, error: 'no data yet' };
-  const cutoff = Date.now() - UPCOMING_GRACE_HOURS * 60 * 60 * 1000;
+  const cutoff = Date.now() - graceHours * 60 * 60 * 1000;
   const fixtures = section.fixtures
     .filter((f) => new Date(f.kickoffUtc).getTime() >= cutoff)
     .sort((a, b) => new Date(a.kickoffUtc) - new Date(b.kickoffUtc));
@@ -25,6 +29,7 @@ app.get('/api/fixtures', (req, res) => {
   res.json({
     rugby: upcomingOnly(cache.rugby),
     cricket: upcomingOnly(cache.cricket),
+    srilanka: upcomingOnly(cache.srilanka, UPCOMING_GRACE_HOURS_DATE_ONLY),
   });
 });
 

@@ -51,12 +51,17 @@ function fixtureCard(f, isNext) {
   const badge = isNext ? '<span class="next-badge">Next match</span>' : '';
   const matchType = f.matchType ? `${f.matchType} · ` : '';
 
+  const timeLines = f.timeUnknown
+    ? `<span class="fixture-datetime">${escapeHtml(f.dateLabel)}</span>
+       <span class="fixture-datetime-nz">Exact kick-off time not published</span>`
+    : `<span class="fixture-datetime">${formatVnTime(f.kickoffUtc)} Vietnam</span>
+       <span class="fixture-datetime-nz">${formatKickoff(f.kickoffUtc)}</span>`;
+
   el.innerHTML = `
     ${badge}
     <div class="fixture-teams">${escapeHtml(f.homeTeam)} v ${escapeHtml(f.awayTeam)}</div>
     <div class="fixture-meta">
-      <span class="fixture-datetime">${formatVnTime(f.kickoffUtc)} Vietnam</span>
-      <span class="fixture-datetime-nz">${formatKickoff(f.kickoffUtc)}</span>
+      ${timeLines}
       <span>${escapeHtml(f.venue)}</span>
     </div>
     <div class="fixture-competition">${matchType}${escapeHtml(f.competition)}</div>
@@ -91,6 +96,7 @@ function renderSection(listEl, section) {
 async function loadFixtures() {
   const rugbyList = document.getElementById('rugby-list');
   const cricketList = document.getElementById('cricket-list');
+  const srilankaList = document.getElementById('srilanka-list');
   const footer = document.getElementById('footer-note');
 
   try {
@@ -99,8 +105,10 @@ async function loadFixtures() {
 
     renderSection(rugbyList, data.rugby);
     renderSection(cricketList, data.cricket);
+    renderSection(srilankaList, data.srilanka);
 
-    const times = [data.rugby.updatedAt, data.cricket.updatedAt].filter(Boolean).map((t) => new Date(t));
+    const times = [data.rugby.updatedAt, data.cricket.updatedAt, data.srilanka?.updatedAt]
+      .filter(Boolean).map((t) => new Date(t));
     if (times.length) {
       const latest = new Date(Math.max(...times));
       footer.textContent = `Data last refreshed ${formatKickoff(latest.toISOString())}`;
@@ -110,6 +118,7 @@ async function loadFixtures() {
   } catch (err) {
     rugbyList.innerHTML = '<p class="status-message">Failed to load fixtures.</p>';
     cricketList.innerHTML = '<p class="status-message">Failed to load fixtures.</p>';
+    srilankaList.innerHTML = '<p class="status-message">Failed to load fixtures.</p>';
   }
 }
 
