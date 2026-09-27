@@ -1,141 +1,102 @@
-const cheerio = require('cheerio');
-
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const EXCLUDE_PATTERN = /women|under-?19|emerging|\ba team\b|development/i;
-const TOUR_PATTERN = /^(.+?)\s+in\s+(.+)$/i;
 
-async function fetchYearPage(year) {
-  const url = `https://en.wikipedia.org/wiki/International_cricket_in_${year}`;
-  const resp = await fetch(url, { headers: { 'User-Agent': UA } });
-  if (!resp.ok) throw new Error(`Wikipedia responded ${resp.status} for ${year}`);
-  return resp.text();
+// ICC's own site (icc-cricket.com) loads its fixtures widget from this feed
+// client-side. It's the actual source of truth behind their fixtures page —
+// clean JSON, real kick-off times, and it covers a full year ahead, unlike
+// Wikipedia (long-range but laggy) or ICC's own page (always current but
+// only ever shows a rolling 30-day window).
+const FEED_URL = 'https://assets-icc.sportz.io/cricket/v1/schedule';
+const CLIENT_ID = 'tPZJbRgIub3Vua93/DWtyQ==';
+const DAYS_AHEAD = 365;
+const TEAM_NAME = 'Sri Lanka';
+
+function formatDate(d) {
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}`;
 }
 
-function normalizeFormat(text) {
-  const cleaned = text.replace(/\s*series\s*$/i, '').trim();
-  // e.g. "2025-2027 ICC World Test Championship - Test" -> "Test"
-  const dashParts = cleaned.split(/\s*[-–]\s*/);
-  return dashParts[dashParts.length - 1].trim();
+function normalizeMatchType(type) {
+  if (type === 'T20') return 'T20I';
+  return type;
 }
 
-function normalizeTeamName(name) {
-  return name.replace(/^the\s+/i, (m) => m[0].toUpperCase() + m.slice(1));
+function parseKickoff(match) {
+  const [month, day, year] = match.match_date_gmt.split('/').map(Number);
+  const [hour, minute] = match.match_time_gmt.split(':').map(Number);
+  if (!year || !month || !day || Number.isNaN(hour) || Number.isNaN(minute)) return null;
+  const d = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function parseDateCell(text, year) {
-  const dayMatch = text.match(/\d{1,2}/);
-  const monthMatch = text.match(new RegExp(MONTHS.join('|'), 'i'));
-  if (!dayMatch || !monthMatch) return null;
-  const day = parseInt(dayMatch[0], 10);
-  const monthIndex = MONTHS.findIndex((m) => m.toLowerCase() === monthMatch[0].toLowerCase());
-  if (monthIndex === -1) return null;
-  // No kick-off time is published on these summary tables, so this is a
-  // date-only placeholder (midnight UTC) — callers must not treat it as a
-  // real instant, only as a sortable/day-level value.
-  const d = new Date(Date.UTC(year, monthIndex, day));
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
-}
-
-function parseSeriesTable($, table, year, seriesTitle) {
-  const fixtures = [];
-  let currentFormat = '';
-
-  $(table).children('tbody').children('tr').each((_, tr) => {
-    const cells = $(tr).children();
-    if (cells.length === 0) return;
-
-    const allHeader = cells.toArray().every((c) => c.tagName === 'th');
-    if (allHeader) {
-      if (cells.length === 1) {
-        currentFormat = normalizeFormat($(cells[0]).text().trim());
-      }
-      return;
-    }
-
-    if (cells.length < 3) return;
-
-    const matchLabel = $(cells[0]).text().trim();
-    const dateText = $(cells[1]).text().trim();
-    const venueText = $(cells[2]).text().trim();
-
-    const date = parseDateCell(dateText, year);
-    if (!date) return;
-
-    fixtures.push({ matchLabel, date, venue: venueText, format: currentFormat });
+async function fetchPage(fromDate, toDate, pageNumber, pageSize) {
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    feed_format: 'json',
+    lang: 'en',
+    is_deleted: 'false',
+    pagination: 'true',
+    page_number: String(pageNumber),
+    page_size: String(pageSize),
+    from_date: fromDate,
+    to_date: toDate,
+    is_upcoming: 'true',
+    is_live: 'true',
+    is_recent: 'false',
+    league_ids: '1,9',
+    timezone: '0000',
   });
-
-  return fixtures;
-}
-
-async function scrapeYear(year, html) {
-  const $ = cheerio.load(html);
-  const fixtures = [];
-
-  $('h2, h3, h4').each((_, heading) => {
-    const $heading = $(heading);
-    const title = $heading.clone().children('.mw-editsection').remove().end().text().trim();
-    if (!title.includes('Sri Lanka') || EXCLUDE_PATTERN.test(title)) return;
-
-    const match = title.match(TOUR_PATTERN);
-    if (!match) return;
-    const away = normalizeTeamName(match[1].trim());
-    const home = normalizeTeamName(match[2].trim());
-    if (home !== 'Sri Lanka' && away !== 'Sri Lanka') return;
-
-    const section = $heading.closest('section');
-    if (section.length === 0) return;
-
-    section.children('table.wikitable').each((__, table) => {
-      const rows = parseSeriesTable($, table, year, title);
-      for (const row of rows) {
-        const idPart = row.matchLabel.replace(/\s+/g, '-') || `${title}-${row.date.toISOString()}`;
-        fixtures.push({
-          id: `sl-${idPart}`,
-          sport: 'srilanka',
-          competition: title,
-          homeTeam: home,
-          awayTeam: away,
-          matchType: row.format,
-          venue: row.venue,
-          kickoffUtc: row.date.toISOString(),
-          timeUnknown: true,
-          dateLabel: row.date.toLocaleDateString('en-NZ', {
-            weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
-          }),
-        });
-      }
-    });
-  });
-
-  return fixtures;
+  const resp = await fetch(`${FEED_URL}?${params}`, { headers: { 'User-Agent': UA } });
+  if (!resp.ok) throw new Error(`ICC schedule feed responded ${resp.status}`);
+  return resp.json();
 }
 
 async function scrapeSriLankaFixtures() {
   const now = new Date();
-  const years = [now.getUTCFullYear(), now.getUTCFullYear() + 1];
+  const fromDate = formatDate(now);
+  const toDate = formatDate(new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000));
+
+  const first = await fetchPage(fromDate, toDate, 1, 250);
+  let matches = first.data?.matches || [];
+  const total = first.meta?.count ?? matches.length;
+
+  // Defensive: page through if the feed ever caps page_size below the total.
+  let pageNumber = 2;
+  while (matches.length < total) {
+    const next = await fetchPage(fromDate, toDate, pageNumber, 250);
+    const batch = next.data?.matches || [];
+    if (batch.length === 0) break;
+    matches = matches.concat(batch);
+    pageNumber += 1;
+  }
 
   const seen = new Set();
-  const all = [];
-  for (const year of years) {
-    const html = await fetchYearPage(year);
-    const fixtures = await scrapeYear(year, html);
-    for (const f of fixtures) {
-      if (seen.has(f.id)) continue;
-      seen.add(f.id);
-      all.push(f);
-    }
+  const fixtures = [];
+  for (const m of matches) {
+    if (m.teama !== TEAM_NAME && m.teamb !== TEAM_NAME) continue;
+    if (seen.has(m.match_id)) continue;
+    const kickoff = parseKickoff(m);
+    if (!kickoff) continue;
+    seen.add(m.match_id);
+
+    fixtures.push({
+      id: `sl-${m.match_id}`,
+      sport: 'srilanka',
+      competition: m.series_name || '',
+      homeTeam: m.teama,
+      awayTeam: m.teamb,
+      matchType: normalizeMatchType(m.match_type),
+      venue: m.venue || '',
+      kickoffUtc: kickoff.toISOString(),
+    });
   }
 
-  if (all.length === 0) {
-    throw new Error('Wikipedia scrape returned zero Sri Lanka fixtures — page structure may have changed');
+  if (fixtures.length === 0) {
+    throw new Error('ICC schedule feed returned zero Sri Lanka fixtures — feed shape may have changed');
   }
 
-  return all;
+  return fixtures;
 }
 
 module.exports = { scrapeSriLankaFixtures };

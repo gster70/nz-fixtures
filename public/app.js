@@ -51,17 +51,12 @@ function fixtureCard(f, isNext) {
   const badge = isNext ? '<span class="next-badge">Next match</span>' : '';
   const matchType = f.matchType ? `${f.matchType} · ` : '';
 
-  const timeLines = f.timeUnknown
-    ? `<span class="fixture-datetime">${escapeHtml(f.dateLabel)}</span>
-       <span class="fixture-datetime-nz">Exact kick-off time not published</span>`
-    : `<span class="fixture-datetime">${formatVnTime(f.kickoffUtc)} Vietnam</span>
-       <span class="fixture-datetime-nz">${formatKickoff(f.kickoffUtc)}</span>`;
-
   el.innerHTML = `
     ${badge}
     <div class="fixture-teams">${escapeHtml(f.homeTeam)} v ${escapeHtml(f.awayTeam)}</div>
     <div class="fixture-meta">
-      ${timeLines}
+      <span class="fixture-datetime">${formatVnTime(f.kickoffUtc)} Vietnam</span>
+      <span class="fixture-datetime-nz">${formatKickoff(f.kickoffUtc)}</span>
       <span>${escapeHtml(f.venue)}</span>
     </div>
     <div class="fixture-competition">${matchType}${escapeHtml(f.competition)}</div>

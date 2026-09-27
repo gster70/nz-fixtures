@@ -3,7 +3,7 @@
 Mobile-friendly single-page site showing upcoming All Blacks rugby, Black Caps
 cricket, and Sri Lanka's full cricket schedule, sorted by date with the next
 match in each section highlighted, all times shown in NZ time (and Vietnam
-time alongside it, where a time is available).
+time alongside it).
 
 ## How it works
 
@@ -22,20 +22,22 @@ JSON to the frontend, rather than scraping on every page load:
   (`espncricinfo.com`, the originally requested source, blocks server-side
   scraping entirely via Akamai bot protection — confirmed with both plain
   requests and headless Chromium — so this NZC source is used instead.)
-- **Cricket (Sri Lanka, full schedule)** — Wikipedia's "International cricket
-  in `<year>`" pages (current year + next year), parsed with `cheerio`
-  (`scrapers/srilanka.js`). Every other source tried for this (ESPN Cricinfo,
-  Sri Lanka Cricket's own site, Cricbuzz) was either bot-protected or had no
-  usable fixture data — see git history for what was tried. Trade-offs from
-  using Wikipedia:
-  - Only bilateral tour series ("X in Y" headings) are parsed; multi-team
-    tournaments (ICC events, the Asian Games, etc.) use a different table
-    shape and aren't included.
-  - These summary tables don't publish kick-off times, only dates — the
-    frontend shows "Exact kick-off time not published" for this section
-    instead of a NZ/Vietnam time.
-  - Coverage depends on Wikipedia volunteers keeping the page current, so a
-    recently-confirmed tour can be missing for a while.
+- **Cricket (Sri Lanka, full schedule)** — the JSON feed behind icc-cricket.com's
+  own fixtures page (`assets-icc.sportz.io/cricket/v1/schedule`, discovered by
+  watching that page's network requests; see `scrapers/srilanka.js`), filtered
+  to matches involving Sri Lanka, fetched for a rolling year ahead. It's a
+  plain unauthenticated JSON API — no bot protection, real kick-off times.
+
+  This wasn't the first thing tried. In order: ESPN Cricinfo and Cricbuzz are
+  both bot-protected the same way as the sources above; Sri Lanka Cricket's
+  own site has no usable content on its fixtures pages; icc-cricket.com's
+  *visible* fixtures page only ever shows a rolling 30-day window; Wikipedia's
+  "International cricket in `<year>`" pages have full-year coverage but lag
+  behind reality for recently-confirmed tours (a Sri Lanka-Pakistan series
+  already scheduled for November wasn't on the page yet, leaving the section
+  showing only a single upcoming match for a while). The Sportz.io feed
+  underneath ICC's own page turned out to have exactly what
+  every other source was missing: full-year range, real times, and no lag.
 
   This section is independent of the match-day email reminders below (which
   stay scoped to the two NZ teams only).
