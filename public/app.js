@@ -117,4 +117,28 @@ async function loadFixtures() {
   }
 }
 
+function setupTabs() {
+  const buttons = document.querySelectorAll('.tab-button');
+  const panels = {
+    nz: document.getElementById('tab-panel-nz'),
+    sl: document.getElementById('tab-panel-sl'),
+  };
+
+  function selectTab(tab) {
+    buttons.forEach((btn) => btn.setAttribute('aria-selected', String(btn.dataset.tab === tab)));
+    panels.nz.hidden = tab !== 'nz';
+    panels.sl.hidden = tab !== 'sl';
+    try { localStorage.setItem('nz-fixtures-tab', tab); } catch {}
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => selectTab(btn.dataset.tab));
+  });
+
+  let initial = 'nz';
+  try { initial = localStorage.getItem('nz-fixtures-tab') || 'nz'; } catch {}
+  selectTab(initial);
+}
+
+setupTabs();
 loadFixtures();

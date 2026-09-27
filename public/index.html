@@ -12,37 +12,46 @@
     <p class="subtitle">All Blacks &amp; Black Caps &middot; Vietnam &amp; NZ time</p>
   </header>
 
+  <nav class="tab-bar" role="tablist">
+    <button class="tab-button" id="tab-nz" role="tab" aria-selected="true" data-tab="nz">NZ</button>
+    <button class="tab-button" id="tab-sl" role="tab" aria-selected="false" data-tab="sl">Sri Lanka</button>
+  </nav>
+
   <main>
-    <section class="sport-section" id="rugby-section" data-sport="rugby">
-      <h2 class="section-title">
-        <span class="section-icon" aria-hidden="true">🏉</span>
-        All Blacks
-      </h2>
-      <div class="fixture-list" id="rugby-list">
-        <p class="status-message">Loading fixtures…</p>
-      </div>
-    </section>
+    <div class="tab-panel" id="tab-panel-nz" role="tabpanel">
+      <section class="sport-section" id="rugby-section" data-sport="rugby">
+        <h2 class="section-title">
+          <span class="section-icon" aria-hidden="true">🏉</span>
+          All Blacks
+        </h2>
+        <div class="fixture-list" id="rugby-list">
+          <p class="status-message">Loading fixtures…</p>
+        </div>
+      </section>
 
-    <section class="sport-section" id="cricket-section" data-sport="cricket">
-      <h2 class="section-title">
-        <span class="section-icon" aria-hidden="true">🏏</span>
-        Black Caps
-      </h2>
-      <div class="fixture-list" id="cricket-list">
-        <p class="status-message">Loading fixtures…</p>
-      </div>
-    </section>
+      <section class="sport-section" id="cricket-section" data-sport="cricket">
+        <h2 class="section-title">
+          <span class="section-icon" aria-hidden="true">🏏</span>
+          Black Caps
+        </h2>
+        <div class="fixture-list" id="cricket-list">
+          <p class="status-message">Loading fixtures…</p>
+        </div>
+      </section>
+    </div>
 
-    <section class="sport-section" id="srilanka-section" data-sport="srilanka">
-      <h2 class="section-title">
-        <span class="section-icon" aria-hidden="true">🏏</span>
-        Sri Lanka Cricket
-      </h2>
-      <p class="section-note">Full Sri Lanka schedule, not just matches vs NZ.</p>
-      <div class="fixture-list" id="srilanka-list">
-        <p class="status-message">Loading fixtures…</p>
-      </div>
-    </section>
+    <div class="tab-panel" id="tab-panel-sl" role="tabpanel" hidden>
+      <section class="sport-section" id="srilanka-section" data-sport="srilanka">
+        <h2 class="section-title">
+          <span class="section-icon" aria-hidden="true">🏏</span>
+          Sri Lanka Cricket
+        </h2>
+        <p class="section-note">Full Sri Lanka schedule, not just matches vs NZ.</p>
+        <div class="fixture-list" id="srilanka-list">
+          <p class="status-message">Loading fixtures…</p>
+        </div>
+      </section>
+    </div>
   </main>
 
   <footer class="page-footer">

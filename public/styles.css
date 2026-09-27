@@ -44,8 +44,45 @@ body {
   font-size: 0.9rem;
 }
 
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  padding: 10px 4px;
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.tab-button[aria-selected="true"] {
+  color: var(--bg);
+  background: var(--text);
+  border-color: var(--text);
+}
+
 .sport-section {
   margin-top: 28px;
+}
+
+.sport-section:first-child {
+  margin-top: 20px;
 }
 
 .section-title {
