@@ -50,24 +50,49 @@ Results are cached to `data/cache.json` and re-scraped once daily at 4am NZ
 time via `node-cron` (`server.js`), plus once on server boot if no cache exists
 yet.
 
-## Match-day email reminders
+## Match-day reminders (email + WhatsApp)
 
 Every 15 minutes (`server.js`), a job checks the cached fixtures for any match
-kicking off in the next 45-60 minutes and, if a reminder hasn't already gone
-out for it, emails one via [Resend](https://resend.com) (`lib/resend.js`).
-Sent reminders are recorded in `data/sentReminders.json` (`lib/sentReminders.js`)
-so restarts and repeat checks don't send duplicates; entries older than 7 days
-are pruned automatically.
+kicking off in the next 45-60 minutes and, for each channel that's configured
+and hasn't already notified for that fixture, sends a reminder:
 
-Requires these environment variables (unset = reminders silently disabled,
-everything else keeps working):
+- **Email** via [Resend](https://resend.com) (`lib/resend.js`)
+- **WhatsApp** via [Twilio's WhatsApp API](https://www.twilio.com/docs/whatsapp) (`lib/twilio.js`)
+
+The two channels are independent — each is skipped if its env vars aren't
+set, and if one fails to send it doesn't block or duplicate the other. Sent
+state is recorded per fixture *and* per channel in `data/sentReminders.json`
+(`lib/sentReminders.js`), so a failure only causes a retry of the channel
+that actually failed, restarts don't cause re-sends, and entries older than
+7 days are pruned automatically.
+
+Requires these environment variables (each channel silently disabled until
+its own vars are set — everything else keeps working):
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `RESEND_API_KEY` | yes | Resend API key |
-| `REMINDER_TO_EMAIL` | yes | Recipient address |
+| `RESEND_API_KEY` | for email | Resend API key |
+| `REMINDER_TO_EMAIL` | for email | Recipient email address |
 | `RESEND_FROM_EMAIL` | no | From address (defaults to Resend's sandbox `onboarding@resend.com`, which can only send to the email your Resend account is registered with — verify a domain in Resend to send to anyone else) |
-| `APP_URL` | no | Link included in the email (defaults to the Railway URL below) |
+| `TWILIO_ACCOUNT_SID` | for WhatsApp | Twilio Account SID |
+| `TWILIO_AUTH_TOKEN` | for WhatsApp | Twilio Auth Token |
+| `TWILIO_WHATSAPP_FROM` | for WhatsApp | Twilio's WhatsApp-enabled sender number, e.g. `whatsapp:+14155238886` for the Twilio Sandbox (the `whatsapp:` prefix is added automatically if omitted) |
+| `REMINDER_WHATSAPP_TO` | for WhatsApp | Recipient's WhatsApp number, e.g. `+64211234567` |
+| `APP_URL` | no | Link included in both reminder messages (defaults to the Railway URL below) |
+
+Two things worth knowing about the WhatsApp side specifically:
+
+- **Sandbox mode**: while using Twilio's free WhatsApp Sandbox (rather than
+  an approved WhatsApp Business sender), the recipient has to send the
+  sandbox's join code to the sandbox number once before it can message them.
+- **The 24-hour session window**: WhatsApp Business policy only allows
+  free-form messages (what this app sends) within 24 hours of the recipient
+  last messaging the business number. Outside that window, only pre-approved
+  message *templates* can be sent. For a low-frequency personal reminder bot
+  this means the recipient may need to send the sandbox/business number a
+  message occasionally to keep the window open — otherwise Twilio will
+  reject the send (visible in the Railway logs as a `[reminder] whatsapp
+  failed` line) until they do.
 
 ## Local development
 

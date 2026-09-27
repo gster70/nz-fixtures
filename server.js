@@ -51,6 +51,12 @@ async function start() {
     console.log('Match-day email reminders are not configured (REMINDER_TO_EMAIL / RESEND_API_KEY missing) — skipping.');
   }
 
+  if (process.env.REMINDER_WHATSAPP_TO && process.env.TWILIO_ACCOUNT_SID) {
+    console.log('Match-day WhatsApp reminders are configured and active.');
+  } else {
+    console.log('Match-day WhatsApp reminders are not configured (REMINDER_WHATSAPP_TO / TWILIO_ACCOUNT_SID missing) — skipping.');
+  }
+
   // Every 15 minutes, check for fixtures kicking off in 45-60 minutes.
   cron.schedule('*/15 * * * *', () => {
     checkAndSendReminders().catch((err) => console.error('Reminder check failed:', err));
